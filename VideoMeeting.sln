@@ -1,0 +1,55 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{28CF22F5-A824-4B99-8DE0-26CFC7F6316D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VideoMeeting.Domain", "src\VideoMeeting.Domain\VideoMeeting.Domain.csproj", "{C90F7E03-E906-4DD2-8399-A2220BF7820E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VideoMeeting.Application", "src\VideoMeeting.Application\VideoMeeting.Application.csproj", "{96E039D8-73E8-4EEE-AF46-87E5B46BDE27}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VideoMeeting.Infrastructure", "src\VideoMeeting.Infrastructure\VideoMeeting.Infrastructure.csproj", "{F662194F-9276-4126-9E99-EE6A76AE7665}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VideoMeeting.Api", "src\VideoMeeting.Api\VideoMeeting.Api.csproj", "{0A8ADB05-C7D8-4190-9FD6-161BEA20C0FB}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VideoMeeting.Shared", "src\VideoMeeting.Shared\VideoMeeting.Shared.csproj", "{6B56F6CE-74CC-4623-9BB8-261C17BCEB82}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{C90F7E03-E906-4DD2-8399-A2220BF7820E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C90F7E03-E906-4DD2-8399-A2220BF7820E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C90F7E03-E906-4DD2-8399-A2220BF7820E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C90F7E03-E906-4DD2-8399-A2220BF7820E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{96E039D8-73E8-4EEE-AF46-87E5B46BDE27}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{96E039D8-73E8-4EEE-AF46-87E5B46BDE27}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{96E039D8-73E8-4EEE-AF46-87E5B46BDE27}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{96E039D8-73E8-4EEE-AF46-87E5B46BDE27}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F662194F-9276-4126-9E99-EE6A76AE7665}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F662194F-9276-4126-9E99-EE6A76AE7665}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F662194F-9276-4126-9E99-EE6A76AE7665}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F662194F-9276-4126-9E99-EE6A76AE7665}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0A8ADB05-C7D8-4190-9FD6-161BEA20C0FB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0A8ADB05-C7D8-4190-9FD6-161BEA20C0FB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0A8ADB05-C7D8-4190-9FD6-161BEA20C0FB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0A8ADB05-C7D8-4190-9FD6-161BEA20C0FB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6B56F6CE-74CC-4623-9BB8-261C17BCEB82}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6B56F6CE-74CC-4623-9BB8-261C17BCEB82}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6B56F6CE-74CC-4623-9BB8-261C17BCEB82}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6B56F6CE-74CC-4623-9BB8-261C17BCEB82}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{C90F7E03-E906-4DD2-8399-A2220BF7820E} = {28CF22F5-A824-4B99-8DE0-26CFC7F6316D}
+		{96E039D8-73E8-4EEE-AF46-87E5B46BDE27} = {28CF22F5-A824-4B99-8DE0-26CFC7F6316D}
+		{F662194F-9276-4126-9E99-EE6A76AE7665} = {28CF22F5-A824-4B99-8DE0-26CFC7F6316D}
+		{0A8ADB05-C7D8-4190-9FD6-161BEA20C0FB} = {28CF22F5-A824-4B99-8DE0-26CFC7F6316D}
+		{6B56F6CE-74CC-4623-9BB8-261C17BCEB82} = {28CF22F5-A824-4B99-8DE0-26CFC7F6316D}
+	EndGlobalSection
+EndGlobal
