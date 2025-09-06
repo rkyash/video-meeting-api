@@ -148,7 +148,9 @@ public class GetMeetingParticipantsQueryHandler : IRequestHandler<GetMeetingPart
                 p.Role,
                 p.IsMuted,
                 p.IsVideoEnabled,
-                p.IsScreenSharing
+                p.IsScreenSharing,
+                null, // SessionId - not provided in this context
+                null  // Token - not provided in this context
             ))
             .ToListAsync(cancellationToken);
 

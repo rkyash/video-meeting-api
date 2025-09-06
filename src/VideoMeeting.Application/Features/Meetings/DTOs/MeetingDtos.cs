@@ -46,7 +46,9 @@ public record ParticipantDto(
     ParticipantRole Role,
     bool IsMuted,
     bool IsVideoEnabled,
-    bool IsScreenSharing
+    bool IsScreenSharing,
+    string? SessionId = null,
+    string? Token = null
 );
 
 public record RecordingDto(

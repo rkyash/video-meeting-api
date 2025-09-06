@@ -11,10 +11,12 @@ namespace VideoMeeting.Application.Features.Meetings.Handlers;
 public class JoinMeetingHandler : IRequestHandler<JoinMeetingCommand, ParticipantDto>
 {
     private readonly IApplicationDbContext _context;
+    private readonly IVonageService _vonageService;
 
-    public JoinMeetingHandler(IApplicationDbContext context)
+    public JoinMeetingHandler(IApplicationDbContext context, IVonageService vonageService)
     {
         _context = context;
+        _vonageService = vonageService;
     }
 
     public async Task<ParticipantDto> Handle(JoinMeetingCommand request, CancellationToken cancellationToken)
@@ -34,6 +36,26 @@ public class JoinMeetingHandler : IRequestHandler<JoinMeetingCommand, Participan
 
         if (user == null)
             throw new KeyNotFoundException("User not found");
+
+        // Handle session management for Assessors (Hosts)
+        if (request.UserRole == "Assessor")
+        {
+            // Check if meeting has a sessionId, if not create one
+            if (string.IsNullOrEmpty(meeting.SessionId))
+            {
+                var sessionResponse = await _vonageService.CreateSession();
+                if (sessionResponse.Success && !string.IsNullOrEmpty(sessionResponse.Data))
+                {
+                    meeting.SessionId = sessionResponse.Data;
+                    _context.Meetings.Update(meeting);
+                    await _context.SaveChangesAsync(cancellationToken);
+                }
+                else
+                {
+                    throw new InvalidOperationException($"Failed to create Vonage session: {sessionResponse.Message}");
+                }
+            }
+        }
         
         // Check for existing participant (active or inactive)
         var existingParticipant = await _context.MeetingParticipants
@@ -41,8 +63,11 @@ public class JoinMeetingHandler : IRequestHandler<JoinMeetingCommand, Participan
                 p => p.MeetingId == meeting.Id && p.UserId == request.UserId,
                 cancellationToken);
         
-        // If participant already active, return existing record
+        // If participant already active, generate token and return existing record
         if (existingParticipant != null && existingParticipant.LeftAt == null)
+        {
+            var participantToken = GenerateTokenForParticipant(meeting.SessionId, request.UserRole);
+            
             return new ParticipantDto(
                 existingParticipant.Id,
                 existingParticipant.MeetingId,
@@ -55,8 +80,11 @@ public class JoinMeetingHandler : IRequestHandler<JoinMeetingCommand, Participan
                 existingParticipant.Role,
                 existingParticipant.IsMuted,
                 existingParticipant.IsVideoEnabled,
-                existingParticipant.IsScreenSharing
+                existingParticipant.IsScreenSharing,
+                meeting.SessionId,
+                participantToken
             );
+        }
 
         if (meeting.Participants.Count(p => p.LeftAt == null) >= meeting.MaxParticipants)
             throw new InvalidOperationException("Meeting is at maximum capacity");
@@ -106,11 +134,14 @@ public class JoinMeetingHandler : IRequestHandler<JoinMeetingCommand, Participan
 
         await _context.SaveChangesAsync(cancellationToken);
 
+        // Generate token for the participant
+        var participantTokenFinal = GenerateTokenForParticipant(meeting.SessionId, request.UserRole);
+
         return new ParticipantDto(
             participant.Id,
             participant.MeetingId,
             participant.UserId,
-            $"{user.FirstName} {user.LastName}",
+            request.UserName,
             null,
             null,
             participant.JoinedAt,
@@ -118,7 +149,20 @@ public class JoinMeetingHandler : IRequestHandler<JoinMeetingCommand, Participan
             participant.Role,
             participant.IsMuted,
             participant.IsVideoEnabled,
-            participant.IsScreenSharing
+            participant.IsScreenSharing,
+            meeting.SessionId,
+            participantTokenFinal
         );
+    }
+
+    private string? GenerateTokenForParticipant(string? sessionId, string userRole)
+    {
+        if (string.IsNullOrEmpty(sessionId))
+            return null;
+
+        var tokenRole = userRole == "Assessor" ? "moderator" : "publisher";
+        var tokenResponse = _vonageService.GenerateToken(sessionId, tokenRole);
+        
+        return tokenResponse.Success ? tokenResponse.Data : null;
     }
 }

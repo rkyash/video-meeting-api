@@ -52,7 +52,9 @@ public class JoinMeetingAsGuestHandler : IRequestHandler<JoinMeetingAsGuestComma
                 existingParticipant.Role,
                 existingParticipant.IsMuted,
                 existingParticipant.IsVideoEnabled,
-                existingParticipant.IsScreenSharing
+                existingParticipant.IsScreenSharing,
+                null, // SessionId - guests don't get session info
+                null  // Token - guests don't get tokens
             );
 
         if (meeting.Participants.Count(p => p.LeftAt == null) >= meeting.MaxParticipants)
@@ -113,7 +115,9 @@ public class JoinMeetingAsGuestHandler : IRequestHandler<JoinMeetingAsGuestComma
             participant.Role,
             participant.IsMuted,
             participant.IsVideoEnabled,
-            participant.IsScreenSharing
+            participant.IsScreenSharing,
+            null, // SessionId - guests don't get session info
+            null  // Token - guests don't get tokens
         );
     }
 }

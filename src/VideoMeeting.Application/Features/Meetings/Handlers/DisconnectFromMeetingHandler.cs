@@ -35,8 +35,29 @@ public class DisconnectFromMeetingHandler : IRequestHandler<DisconnectFromMeetin
         participant.LeftAt = DateTime.UtcNow;
         _context.MeetingParticipants.Update(participant);
 
+        // Check if this was a host (Assessor) participant
+        var wasHost = participant.Role == ParticipantRole.Host;
+        
         // Check if all participants have left and end the meeting if so
         var activeParticipants = meeting.Participants.Count(p => p.LeftAt == null && p.Id != participant.Id);
+        
+        // If this was a host, check if there are any remaining hosts
+        if (wasHost)
+        {
+            var remainingHosts = meeting.Participants.Count(p => 
+                p.LeftAt == null && 
+                p.Id != participant.Id && 
+                p.Role == ParticipantRole.Host);
+                
+            // If no hosts remain, blank the sessionId
+            if (remainingHosts == 0)
+            {
+                meeting.SessionId = string.Empty;
+                _context.Meetings.Update(meeting);
+            }
+        }
+        
+        // End meeting if all participants have left
         if (activeParticipants == 0 && meeting.Status == MeetingStatus.Active)
         {
             meeting.Status = MeetingStatus.Ended;
