@@ -34,20 +34,20 @@ public class JoinMeetingHandler : IRequestHandler<JoinMeetingCommand, Participan
 
         if (user == null)
             throw new KeyNotFoundException("User not found");
-
+        
         // Check for existing participant (active or inactive)
         var existingParticipant = await _context.MeetingParticipants
             .FirstOrDefaultAsync(
                 p => p.MeetingId == meeting.Id && p.UserId == request.UserId,
                 cancellationToken);
-
+        
         // If participant already active, return existing record
         if (existingParticipant != null && existingParticipant.LeftAt == null)
             return new ParticipantDto(
                 existingParticipant.Id,
                 existingParticipant.MeetingId,
                 existingParticipant.UserId,
-                $"{user.FirstName} {user.LastName}",
+                existingParticipant.UserName,
                 null,
                 null,
                 existingParticipant.JoinedAt,
@@ -62,7 +62,7 @@ public class JoinMeetingHandler : IRequestHandler<JoinMeetingCommand, Participan
             throw new InvalidOperationException("Meeting is at maximum capacity");
 
         var participantRole =
-            meeting.CreatedById == request.UserId ? ParticipantRole.Host : ParticipantRole.Participant;
+            request.UserRole == "Assessor" ? ParticipantRole.Host : ParticipantRole.Participant;
 
         MeetingParticipant participant;
 
@@ -89,7 +89,7 @@ public class JoinMeetingHandler : IRequestHandler<JoinMeetingCommand, Participan
                 UserId = request.UserId,
                 Role = participantRole,
                 JoinedAt = DateTime.UtcNow,
-                IsMuted = false,
+                IsMuted = true,
                 IsVideoEnabled = true,
                 IsScreenSharing = false,
                 JoinCount = 1
