@@ -8,8 +8,7 @@ public class Meeting : BaseAuditableEntity
     public string Title { get; set; } = string.Empty;
     public string? Description { get; set; }
     public string SessionId { get; set; } = string.Empty;
-    public string Token { get; set; } = string.Empty;
-    public string? RoomCode { get; set; }
+    public string RoomCode { get; set; } = string.Empty;
     public DateTime ScheduledAt { get; set; }
     public DateTime? StartedAt { get; set; }
     public DateTime? EndedAt { get; set; }

@@ -115,11 +115,12 @@ Add your Vonage API credentials:
 dotnet restore
 ```
 
-### 5. Run Database Migrations
+### 5. Database Setup
+The project currently uses `EnsureCreated()` for database initialization. See [Database Migration Guide](#-database-migration-guide) below for production deployment options.
+
 ```bash
-cd src/VideoMeeting.Infrastructure
-dotnet ef migrations add InitialCreate -s ../VideoMeeting.Api
-dotnet ef database update -s ../VideoMeeting.Api
+# Current approach - database will be created automatically on first run
+# No manual setup required for development
 ```
 
 ### 6. Run the Application
@@ -380,6 +381,205 @@ public static class ChatEndpoints
 // 2. Register in Program.cs
 app.MapChatEndpoints();
 ```
+
+## 📊 Database Migration Guide
+
+### Current Database Setup
+The application currently uses `EnsureCreated()` for database initialization:
+
+```csharp
+// Program.cs - Current approach
+using (var scope = app.Services.CreateScope())
+{
+    var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    context.Database.EnsureCreated(); // Creates DB if doesn't exist
+}
+```
+
+### Migration Commands
+
+#### Prerequisites
+```bash
+# Install EF Core tools globally (if not installed)
+dotnet tool install --global dotnet-ef
+
+# Or update existing tools
+dotnet tool update --global dotnet-ef
+```
+
+#### Basic Migration Commands
+
+```bash
+# Create initial migration (from solution root)
+dotnet ef migrations add InitialCreate \
+  --project src/VideoMeeting.Infrastructure \
+  --startup-project src/VideoMeeting.Api \
+  --output-dir Persistence/Migrations
+
+# Add migration for recent changes (JoinCount field, etc.)
+dotnet ef migrations add AddJoinCountAndFeatures \
+  --project src/VideoMeeting.Infrastructure \
+  --startup-project src/VideoMeeting.Api
+
+# Apply migrations to database
+dotnet ef database update \
+  --project src/VideoMeeting.Infrastructure \
+  --startup-project src/VideoMeeting.Api
+
+# Generate SQL script for production
+dotnet ef migrations script \
+  --project src/VideoMeeting.Infrastructure \
+  --startup-project src/VideoMeeting.Api \
+  --output migration.sql
+
+# Remove last migration (if not applied)
+dotnet ef migrations remove \
+  --project src/VideoMeeting.Infrastructure \
+  --startup-project src/VideoMeeting.Api
+
+# View migration history
+dotnet ef migrations list \
+  --project src/VideoMeeting.Infrastructure \
+  --startup-project src/VideoMeeting.Api
+```
+
+### Production Deployment Options
+
+#### Option 1: Manual SQL Fix (Current Recommendation)
+For immediate production deployment with `EnsureCreated()` approach:
+
+```sql
+-- Add missing JoinCount column to existing production database
+ALTER TABLE "MeetingParticipants" 
+ADD COLUMN IF NOT EXISTS "JoinCount" integer NOT NULL DEFAULT 1;
+
+-- Update existing participants to have default join count
+UPDATE "MeetingParticipants" 
+SET "JoinCount" = 1 
+WHERE "JoinCount" IS NULL;
+```
+
+#### Option 2: Switch to Migration-Based Deployment
+
+**Update Program.cs:**
+```csharp
+// Replace EnsureCreated() with migrations
+using (var scope = app.Services.CreateScope())
+{
+    var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    
+    if (app.Environment.IsDevelopment())
+    {
+        await context.Database.MigrateAsync(); // Auto-apply in development
+    }
+    else
+    {
+        // Production: Check for pending migrations
+        var pendingMigrations = await context.Database.GetPendingMigrationsAsync();
+        if (pendingMigrations.Any())
+        {
+            var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+            logger.LogWarning("Pending migrations: {Migrations}", 
+                string.Join(", ", pendingMigrations));
+            
+            // Uncomment to auto-apply in production (use with caution)
+            // await context.Database.MigrateAsync();
+        }
+    }
+}
+```
+
+**Production Deployment Commands:**
+```bash
+# 1. Generate idempotent migration script
+dotnet ef migrations script --idempotent \
+  --project src/VideoMeeting.Infrastructure \
+  --startup-project src/VideoMeeting.Api \
+  --output production-migration.sql
+
+# 2. Apply SQL script to production database
+psql -h your-host -U your-user -d your-database -f production-migration.sql
+
+# 3. Deploy application (migrations already applied)
+```
+
+#### Option 3: CI/CD Integration
+
+**GitHub Actions Example:**
+```yaml
+name: Deploy with Migrations
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: '9.0.x'
+    - name: Install EF Tools
+      run: dotnet tool install --global dotnet-ef
+    - name: Apply Database Migrations
+      run: |
+        dotnet ef database update \
+          --project src/VideoMeeting.Infrastructure \
+          --startup-project src/VideoMeeting.Api
+      env:
+        ConnectionStrings__DefaultConnection: ${{ secrets.DB_CONNECTION }}
+```
+
+### Recent Changes Requiring Database Updates
+
+#### New Features Added:
+1. **JoinCount field** in `MeetingParticipant` entity
+2. **Stop Recording** functionality  
+3. **Disconnect from Meeting** functionality
+4. **Participant reuse** logic (updates existing participants instead of creating new ones)
+
+#### Required Database Changes:
+```sql
+-- Add JoinCount column (required for participant reuse feature)
+ALTER TABLE "MeetingParticipants" 
+ADD COLUMN "JoinCount" integer NOT NULL DEFAULT 1;
+
+-- No additional schema changes needed for other features
+-- (Stop recording and disconnect use existing tables)
+```
+
+### Migration vs EnsureCreated Comparison
+
+| Feature | EnsureCreated() | EF Migrations |
+|---------|----------------|---------------|
+| Schema Changes | ❌ No support | ✅ Full support |
+| Version Control | ❌ No tracking | ✅ Git trackable |
+| Rollback | ❌ Not possible | ✅ Supported |
+| Production Safety | ❌ Risky | ✅ Safe |
+| Team Development | ❌ Conflicts | ✅ Merge friendly |
+| Data Preservation | ❌ May lose data | ✅ Data preserved |
+
+### Troubleshooting
+
+**Common Issues:**
+```bash
+# Column 'JoinCount' does not exist error
+# Solution: Apply the SQL fix above or run migrations
+
+# Check migration status
+dotnet ef migrations list --project src/VideoMeeting.Infrastructure --startup-project src/VideoMeeting.Api
+
+# Test database connection
+dotnet ef dbcontext info --project src/VideoMeeting.Infrastructure --startup-project src/VideoMeeting.Api
+
+# Reset development database (development only)
+dotnet ef database drop --force \
+  --project src/VideoMeeting.Infrastructure \
+  --startup-project src/VideoMeeting.Api
+```
+
+### Next Steps
+1. **Immediate**: Apply SQL fix for `JoinCount` column in production
+2. **Short-term**: Continue with `EnsureCreated()` approach  
+3. **Long-term**: Plan migration to EF migrations for better production control
 
 ## 🚀 Deployment
 

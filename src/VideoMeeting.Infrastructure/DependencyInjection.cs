@@ -25,6 +25,9 @@ public static class DependencyInjection
 
         services.AddScoped<IApplicationDbContext>(provider => provider.GetRequiredService<ApplicationDbContext>());
 
+        // Vonage Video Services
+        services.AddScoped<Vonage.Video.Authentication.IVideoTokenGenerator, Vonage.Video.Authentication.VideoTokenGenerator>();
+        
         // Services - these will use injected configuration classes
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IVonageService, VonageService>();

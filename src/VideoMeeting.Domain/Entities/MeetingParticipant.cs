@@ -16,6 +16,7 @@ public class MeetingParticipant : BaseEntity
     public bool IsMuted { get; set; } = false;
     public bool IsVideoEnabled { get; set; } = true;
     public bool IsScreenSharing { get; set; } = false;
+    public int JoinCount { get; set; } = 1;
 
     public virtual Meeting Meeting { get; set; } = null!;
     public virtual User? User { get; set; }

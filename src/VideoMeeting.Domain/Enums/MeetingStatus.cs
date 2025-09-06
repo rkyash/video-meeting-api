@@ -22,5 +22,6 @@ public enum RecordingStatus
     Processing = 1,
     Available = 2,
     Failed = 3,
-    Deleted = 4
+    Deleted = 4,
+    Completed=5
 }

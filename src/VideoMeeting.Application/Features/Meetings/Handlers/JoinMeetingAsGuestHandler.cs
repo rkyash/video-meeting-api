@@ -21,7 +21,7 @@ public class JoinMeetingAsGuestHandler : IRequestHandler<JoinMeetingAsGuestComma
     {
         var meeting = await _context.Meetings
             .Include(m => m.Participants)
-            .FirstOrDefaultAsync(m => m.Id == request.MeetingId, cancellationToken);
+            .FirstOrDefaultAsync(m => m.RoomCode == request.RoomCode, cancellationToken);
 
         if (meeting == null)
             throw new KeyNotFoundException("Meeting not found");
@@ -29,23 +29,69 @@ public class JoinMeetingAsGuestHandler : IRequestHandler<JoinMeetingAsGuestComma
         if (meeting.Status == MeetingStatus.Ended)
             throw new InvalidOperationException("Meeting has ended");
 
+        // Check for existing guest participant by name and email
+        var existingParticipant = await _context.MeetingParticipants
+            .FirstOrDefaultAsync(
+                p => p.MeetingId == meeting.Id && 
+                     p.UserId == null && 
+                     p.GuestName == request.GuestName && 
+                     p.GuestEmail == request.GuestEmail,
+                cancellationToken);
+
+        // If guest is already active, return existing record
+        if (existingParticipant != null && existingParticipant.LeftAt == null)
+            return new ParticipantDto(
+                existingParticipant.Id,
+                existingParticipant.MeetingId,
+                existingParticipant.UserId,
+                null,
+                existingParticipant.GuestName,
+                existingParticipant.GuestEmail,
+                existingParticipant.JoinedAt,
+                existingParticipant.LeftAt,
+                existingParticipant.Role,
+                existingParticipant.IsMuted,
+                existingParticipant.IsVideoEnabled,
+                existingParticipant.IsScreenSharing
+            );
+
         if (meeting.Participants.Count(p => p.LeftAt == null) >= meeting.MaxParticipants)
             throw new InvalidOperationException("Meeting is at maximum capacity");
 
-        var participant = new MeetingParticipant
-        {
-            MeetingId = request.MeetingId,
-            UserId = null,
-            GuestName = request.GuestName,
-            GuestEmail = request.GuestEmail,
-            Role = ParticipantRole.Guest,
-            JoinedAt = DateTime.UtcNow,
-            IsMuted = false,
-            IsVideoEnabled = true,
-            IsScreenSharing = false
-        };
+        MeetingParticipant participant;
 
-        _context.MeetingParticipants.Add(participant);
+        if (existingParticipant != null)
+        {
+            // Reactivate existing guest participant
+            existingParticipant.LeftAt = null;
+            existingParticipant.JoinedAt = DateTime.UtcNow;
+            existingParticipant.JoinCount++;
+            existingParticipant.IsMuted = false;
+            existingParticipant.IsVideoEnabled = true;
+            existingParticipant.IsScreenSharing = false;
+
+            _context.MeetingParticipants.Update(existingParticipant);
+            participant = existingParticipant;
+        }
+        else
+        {
+            // Create new guest participant
+            participant = new MeetingParticipant
+            {
+                MeetingId = meeting.Id,
+                UserId = null,
+                GuestName = request.GuestName,
+                GuestEmail = request.GuestEmail,
+                Role = ParticipantRole.Guest,
+                JoinedAt = DateTime.UtcNow,
+                IsMuted = false,
+                IsVideoEnabled = true,
+                IsScreenSharing = false,
+                JoinCount = 1
+            };
+
+            _context.MeetingParticipants.Add(participant);
+        }
 
         if (meeting.Status == MeetingStatus.Scheduled)
         {

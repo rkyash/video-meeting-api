@@ -52,7 +52,7 @@ public static class MeetingEndpoints
             .Produces<ApiResponse>(StatusCodes.Status401Unauthorized);
 
         // Join meeting as authenticated user
-        group.MapPost("/{id:int}/join", JoinMeetingAsync)
+        group.MapPost("/{roomCode}/join", JoinMeetingAsync)
             .WithName("JoinMeeting")
             .WithSummary("Join meeting as authenticated user")
             .WithDescription("Joins a meeting as an authenticated user")
@@ -63,7 +63,7 @@ public static class MeetingEndpoints
             .Produces<ApiResponse>(StatusCodes.Status404NotFound);
 
         // Join meeting as guest
-        group.MapPost("/{id:int}/join-as-guest", JoinMeetingAsGuestAsync)
+        group.MapPost("/{roomCode}/join-as-guest", JoinMeetingAsGuestAsync)
             .WithName("JoinMeetingAsGuest")
             .WithSummary("Join meeting as guest user")
             .WithDescription("Allows guest users to join meetings without authentication")
@@ -96,6 +96,27 @@ public static class MeetingEndpoints
             .WithSummary("Get meeting recordings")
             .WithDescription("Retrieves all recordings for a meeting")
             .Produces<ApiResponse<List<RecordingDto>>>()
+            .Produces<ApiResponse>(StatusCodes.Status404NotFound);
+
+        // Stop meeting recording
+        group.MapPost("/{id:int}/recordings/{recordingId:int}/stop", StopRecordingAsync)
+            .WithName("StopRecording")
+            .WithSummary("Stop meeting recording")
+            .WithDescription("Stops an active recording for the meeting")
+            .RequireAuthorization()
+            .Produces<ApiResponse<RecordingDto>>()
+            .Produces<ApiResponse>(StatusCodes.Status400BadRequest)
+            .Produces<ApiResponse>(StatusCodes.Status401Unauthorized)
+            .Produces<ApiResponse>(StatusCodes.Status404NotFound);
+
+        // Disconnect from meeting
+        group.MapPost("/{roomCode}/disconnect", DisconnectFromMeetingAsync)
+            .WithName("DisconnectFromMeeting")
+            .WithSummary("Disconnect from meeting")
+            .WithDescription("Disconnects the user from the meeting and marks them as left")
+            .RequireAuthorization()
+            .Produces<ApiResponse<bool>>()
+            .Produces<ApiResponse>(StatusCodes.Status401Unauthorized)
             .Produces<ApiResponse>(StatusCodes.Status404NotFound);
     }
 
@@ -162,7 +183,7 @@ public static class MeetingEndpoints
     }
 
     private static async Task<IResult> JoinMeetingAsync(
-        int id,
+        string roomCode,
         ClaimsPrincipal user,
         IMediator mediator)
     {
@@ -172,7 +193,7 @@ public static class MeetingEndpoints
             if (userId == 0)
                 return ResultExtensions.ToUnauthorizedResponse();
 
-            var command = new JoinMeetingCommand(id, userId);
+            var command = new JoinMeetingCommand(roomCode, userId,"");
             var participant = await mediator.Send(command);
             return participant.ToApiResponse("Successfully joined meeting");
         }
@@ -191,13 +212,13 @@ public static class MeetingEndpoints
     }
 
     private static async Task<IResult> JoinMeetingAsGuestAsync(
-        int id,
+        string roomCode,
         JoinMeetingAsGuestRequest request,
         IMediator mediator)
     {
         try
         {
-            var command = new JoinMeetingAsGuestCommand(id, request.GuestName, request.GuestEmail);
+            var command = new JoinMeetingAsGuestCommand(roomCode, request.GuestName, request.GuestEmail);
             var participant = await mediator.Send(command);
             return participant.ToApiResponse("Successfully joined meeting as guest");
         }
@@ -276,6 +297,65 @@ public static class MeetingEndpoints
         catch (Exception ex)
         {
             return ResultExtensions.ToInternalServerErrorResponse("An error occurred while retrieving recordings");
+        }
+    }
+
+    private static async Task<IResult> StopRecordingAsync(
+        int id,
+        int recordingId,
+        ClaimsPrincipal user,
+        IMediator mediator)
+    {
+        try
+        {
+            var userId = GetUserId(user);
+            if (userId == 0)
+                return ResultExtensions.ToUnauthorizedResponse();
+
+            var command = new StopRecordingCommand(id, recordingId, userId);
+            var recording = await mediator.Send(command);
+            return recording.ToApiResponse("Recording stopped successfully");
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return ResultExtensions.ToNotFoundResponse(ex.Message);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return ResultExtensions.ToBadRequestResponse(ex.Message);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return ResultExtensions.ToUnauthorizedResponse(ex.Message);
+        }
+        catch (Exception ex)
+        {
+            return ResultExtensions.ToInternalServerErrorResponse("An error occurred while stopping the recording");
+        }
+    }
+
+    private static async Task<IResult> DisconnectFromMeetingAsync(
+        string roomCode,
+        ClaimsPrincipal user,
+        IMediator mediator)
+    {
+        try
+        {
+            var userId = GetUserId(user);
+            if (userId == 0)
+                return ResultExtensions.ToUnauthorizedResponse();
+
+            var command = new DisconnectFromMeetingCommand(roomCode, userId);
+            var result = await mediator.Send(command);
+            return true.ToApiResponse("Successfully disconnected from meeting");
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return ResultExtensions.ToNotFoundResponse(ex.Message);
+        }
+        catch (Exception ex)
+        {
+            return ResultExtensions.ToInternalServerErrorResponse("An error occurred while disconnecting from the meeting");
         }
     }
 

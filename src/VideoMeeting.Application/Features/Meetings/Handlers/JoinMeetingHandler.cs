@@ -21,7 +21,7 @@ public class JoinMeetingHandler : IRequestHandler<JoinMeetingCommand, Participan
     {
         var meeting = await _context.Meetings
             .Include(m => m.Participants)
-            .FirstOrDefaultAsync(m => m.Id == request.MeetingId, cancellationToken);
+            .FirstOrDefaultAsync(m => m.RoomCode == request.RoomCode, cancellationToken);
 
         if (meeting == null)
             throw new KeyNotFoundException("Meeting not found");
@@ -35,12 +35,14 @@ public class JoinMeetingHandler : IRequestHandler<JoinMeetingCommand, Participan
         if (user == null)
             throw new KeyNotFoundException("User not found");
 
+        // Check for existing participant (active or inactive)
         var existingParticipant = await _context.MeetingParticipants
             .FirstOrDefaultAsync(
-                p => p.MeetingId == request.MeetingId && p.UserId == request.UserId && p.LeftAt == null,
+                p => p.MeetingId == meeting.Id && p.UserId == request.UserId,
                 cancellationToken);
 
-        if (existingParticipant != null)
+        // If participant already active, return existing record
+        if (existingParticipant != null && existingParticipant.LeftAt == null)
             return new ParticipantDto(
                 existingParticipant.Id,
                 existingParticipant.MeetingId,
@@ -62,18 +64,39 @@ public class JoinMeetingHandler : IRequestHandler<JoinMeetingCommand, Participan
         var participantRole =
             meeting.CreatedById == request.UserId ? ParticipantRole.Host : ParticipantRole.Participant;
 
-        var participant = new MeetingParticipant
-        {
-            MeetingId = request.MeetingId,
-            UserId = request.UserId,
-            Role = participantRole,
-            JoinedAt = DateTime.UtcNow,
-            IsMuted = false,
-            IsVideoEnabled = true,
-            IsScreenSharing = false
-        };
+        MeetingParticipant participant;
 
-        _context.MeetingParticipants.Add(participant);
+        if (existingParticipant != null)
+        {
+            // Reactivate existing participant
+            existingParticipant.LeftAt = null;
+            existingParticipant.JoinedAt = DateTime.UtcNow;
+            existingParticipant.JoinCount++;
+            existingParticipant.IsMuted = false;
+            existingParticipant.IsVideoEnabled = true;
+            existingParticipant.IsScreenSharing = false;
+            existingParticipant.Role = participantRole;
+
+            _context.MeetingParticipants.Update(existingParticipant);
+            participant = existingParticipant;
+        }
+        else
+        {
+            // Create new participant
+            participant = new MeetingParticipant
+            {
+                MeetingId = meeting.Id,
+                UserId = request.UserId,
+                Role = participantRole,
+                JoinedAt = DateTime.UtcNow,
+                IsMuted = false,
+                IsVideoEnabled = true,
+                IsScreenSharing = false,
+                JoinCount = 1
+            };
+
+            _context.MeetingParticipants.Add(participant);
+        }
 
         if (meeting.Status == MeetingStatus.Scheduled)
         {

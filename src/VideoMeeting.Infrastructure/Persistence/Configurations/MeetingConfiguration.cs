@@ -25,10 +25,6 @@ public class MeetingConfiguration : IEntityTypeConfiguration<Meeting>
             .HasMaxLength(100)
             .IsRequired();
 
-        builder.Property(m => m.Token)
-            .HasMaxLength(500)
-            .IsRequired();
-
         builder.Property(m => m.RoomCode)
             .HasMaxLength(10);
 

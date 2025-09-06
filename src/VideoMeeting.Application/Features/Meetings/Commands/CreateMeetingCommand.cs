@@ -9,5 +9,6 @@ public record CreateMeetingCommand(
     DateTime ScheduledAt,
     bool IsScreenSharingEnabled = true,
     int MaxParticipants = 15,
-    long CreatedById = 0
+    long CreatedById = 0,
+    string? RoomCode = null
 ) : IRequest<MeetingResponseDto>;

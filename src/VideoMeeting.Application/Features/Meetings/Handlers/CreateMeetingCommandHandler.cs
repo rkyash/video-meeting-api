@@ -24,23 +24,69 @@ public class CreateMeetingCommandHandler : IRequestHandler<CreateMeetingCommand,
     {
         // var sessionId = await _vonageService.CreateSession();
         // var token = _vonageService.GenerateToken(sessionId.Data.ToString());
-        var roomCode = RoomCode.Create();
+        
+        Meeting meeting;
 
-        var meeting = new Meeting
+        // Check if RoomCode is provided and if a meeting with that RoomCode already exists
+        if (!string.IsNullOrEmpty(request.RoomCode))
         {
-            Title = request.Title,
-            Description = request.Description,
-            RoomCode = roomCode.Value,
-            ScheduledAt = request.ScheduledAt,
-            CreatedById = request.CreatedById,
-            IsRecordingEnabled = true,
-            IsScreenSharingEnabled = request.IsScreenSharingEnabled,
-            MaxParticipants = request.MaxParticipants,
-            Status = MeetingStatus.Scheduled,
-            CreatedAt = DateTime.UtcNow
-        };
+            meeting = await _context.Meetings
+                .FirstOrDefaultAsync(m => m.RoomCode == request.RoomCode, cancellationToken);
 
-        _context.Meetings.Add(meeting);
+            if (meeting != null)
+            {
+                // Update existing meeting
+                meeting.Title = request.Title;
+                meeting.Description = request.Description;
+                meeting.ScheduledAt = request.ScheduledAt;
+                meeting.IsScreenSharingEnabled = request.IsScreenSharingEnabled;
+                meeting.MaxParticipants = request.MaxParticipants;
+                meeting.UpdatedAt = DateTime.UtcNow;
+                
+                _context.Meetings.Update(meeting);
+            }
+            else
+            {
+                // Create new meeting with provided RoomCode
+                meeting = new Meeting
+                {
+                    Title = request.Title,
+                    Description = request.Description,
+                    RoomCode = request.RoomCode,
+                    ScheduledAt = request.ScheduledAt,
+                    CreatedById = request.CreatedById,
+                    IsRecordingEnabled = true,
+                    IsScreenSharingEnabled = request.IsScreenSharingEnabled,
+                    MaxParticipants = request.MaxParticipants,
+                    Status = MeetingStatus.Scheduled,
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                _context.Meetings.Add(meeting);
+            }
+        }
+        else
+        {
+            // Create new meeting with generated RoomCode
+            var roomCode = RoomCode.Create();
+
+            meeting = new Meeting
+            {
+                Title = request.Title,
+                Description = request.Description,
+                RoomCode = roomCode.Value,
+                ScheduledAt = request.ScheduledAt,
+                CreatedById = request.CreatedById,
+                IsRecordingEnabled = true,
+                IsScreenSharingEnabled = request.IsScreenSharingEnabled,
+                MaxParticipants = request.MaxParticipants,
+                Status = MeetingStatus.Scheduled,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            _context.Meetings.Add(meeting);
+        }
+
         await _context.SaveChangesAsync(cancellationToken);
 
         // Load the created by user for the response
@@ -54,7 +100,6 @@ public class CreateMeetingCommandHandler : IRequestHandler<CreateMeetingCommand,
             meeting.Title,
             meeting.Description,
             meeting.SessionId,
-            meeting.Token,
             meeting.RoomCode,
             meeting.ScheduledAt,
             meeting.StartedAt,
