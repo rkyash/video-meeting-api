@@ -7,6 +7,8 @@ public class MeetingParticipant : BaseEntity
 {
     public long MeetingId { get; set; }
     public long? UserId { get; set; }
+    public string? UserName { get; set; }
+    public string? UserEmail { get; set; }
     public string? GuestName { get; set; }
     public string? GuestEmail { get; set; }
     public string ConnectionId { get; set; } = string.Empty;
