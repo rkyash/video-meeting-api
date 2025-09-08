@@ -80,7 +80,7 @@ public static class MeetingEndpoints
             .Produces<ApiResponse>(StatusCodes.Status404NotFound);
 
         // Start meeting recording
-        group.MapPost("/{id:int}/recordings/start", StartRecordingAsync)
+        group.MapPost("/{roomCode}/recordings/start", StartRecordingAsync)
             .WithName("StartRecording")
             .WithSummary("Start meeting recording")
             .WithDescription("Starts recording the meeting using Vonage")
@@ -203,6 +203,7 @@ public static class MeetingEndpoints
             var userEmail = currentUser.UsrEmail;
             var command = new JoinMeetingCommand(roomCode, userId,currentUser.RoleName,fullName,userEmail);
             var participant = await mediator.Send(command);
+            
             return participant.ToApiResponse("Successfully joined meeting");
         }
         catch (KeyNotFoundException ex)
@@ -255,18 +256,21 @@ public static class MeetingEndpoints
     }
 
     private static async Task<IResult> StartRecordingAsync(
-        int id,
+        string roomCode,
         StartRecordingRequest request,
         ClaimsPrincipal user,
         IMediator mediator)
     {
         try
         {
-            var userId = GetUserId(user);
+            var currentUser = GetCurrentUser(user);
+            if (currentUser == null)
+                return ResultExtensions.ToUnauthorizedResponse();
+            var userId = long.Parse(currentUser.UserId);
             if (userId == 0)
                 return ResultExtensions.ToUnauthorizedResponse();
 
-            var command = new StartRecordingCommand(id, userId, request.RecordingName);
+            var command = new StartRecordingCommand(roomCode, userId, request.RecordingName);
             var recording = await mediator.Send(command);
             return recording.ToApiResponse("Recording started successfully");
         }

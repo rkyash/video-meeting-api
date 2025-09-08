@@ -48,7 +48,8 @@ public record ParticipantDto(
     bool IsVideoEnabled,
     bool IsScreenSharing,
     string? SessionId = null,
-    string? Token = null
+    string? Token = null,
+    string? ApiKey = null
 );
 
 public record RecordingDto(

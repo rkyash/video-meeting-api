@@ -105,7 +105,7 @@ public class VonageService : IVonageService
                 claims: new Dictionary<string, object>
                 {
                     { "exp", expireTime}, // Expiry time of 60 minutes
-                    { "data", userName }
+                    { "connection_data", userName }
                 }
             );
             // Generate the token

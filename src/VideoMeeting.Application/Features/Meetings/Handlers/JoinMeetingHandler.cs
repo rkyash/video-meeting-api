@@ -5,6 +5,7 @@ using VideoMeeting.Application.Features.Meetings.Commands;
 using VideoMeeting.Application.Features.Meetings.DTOs;
 using VideoMeeting.Domain.Entities;
 using VideoMeeting.Domain.Enums;
+using VideoMeeting.Shared.Configuration;
 
 namespace VideoMeeting.Application.Features.Meetings.Handlers;
 
@@ -12,11 +13,13 @@ public class JoinMeetingHandler : IRequestHandler<JoinMeetingCommand, Participan
 {
     private readonly IApplicationDbContext _context;
     private readonly IVonageService _vonageService;
+    private readonly VonageConfiguration _vonageConfig;
 
-    public JoinMeetingHandler(IApplicationDbContext context, IVonageService vonageService)
+    public JoinMeetingHandler(IApplicationDbContext context, IVonageService vonageService,VonageConfiguration vonageConfig)
     {
         _context = context;
         _vonageService = vonageService;
+        _vonageConfig = vonageConfig;
     }
 
     public async Task<ParticipantDto> Handle(JoinMeetingCommand request, CancellationToken cancellationToken)
@@ -82,7 +85,8 @@ public class JoinMeetingHandler : IRequestHandler<JoinMeetingCommand, Participan
                 existingParticipant.IsVideoEnabled,
                 existingParticipant.IsScreenSharing,
                 meeting.SessionId,
-                participantToken
+                participantToken,
+                _vonageConfig.ApplicationId
             );
         }
 
@@ -153,17 +157,18 @@ public class JoinMeetingHandler : IRequestHandler<JoinMeetingCommand, Participan
             participant.IsVideoEnabled,
             participant.IsScreenSharing,
             meeting.SessionId,
-            participantTokenFinal
+            participantTokenFinal,
+            _vonageConfig.ApplicationId
         );
     }
 
-    private string? GenerateTokenForParticipant(string? sessionId, string userRole,string ? userName = null)
+    private string? GenerateTokenForParticipant(string? sessionId, string userRole,string ? userName)
     {
         if (string.IsNullOrEmpty(sessionId))
             return null;
 
         var tokenRole = userRole == "Assessor" ? "moderator" : "publisher";
-        var tokenResponse = _vonageService.GenerateToken(sessionId, tokenRole);
+        var tokenResponse = _vonageService.GenerateToken(sessionId, tokenRole,userName);
         
         return tokenResponse.Success ? tokenResponse.Data : null;
     }

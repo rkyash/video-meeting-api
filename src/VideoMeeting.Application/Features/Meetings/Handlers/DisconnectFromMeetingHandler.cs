@@ -9,16 +9,19 @@ namespace VideoMeeting.Application.Features.Meetings.Handlers;
 public class DisconnectFromMeetingHandler : IRequestHandler<DisconnectFromMeetingCommand, bool>
 {
     private readonly IApplicationDbContext _context;
+    private readonly IVonageService _vonageService;
 
-    public DisconnectFromMeetingHandler(IApplicationDbContext context)
+    public DisconnectFromMeetingHandler(IApplicationDbContext context, IVonageService vonageService)
     {
         _context = context;
+        _vonageService = vonageService;
     }
 
     public async Task<bool> Handle(DisconnectFromMeetingCommand request, CancellationToken cancellationToken)
     {
         var meeting = await _context.Meetings
             .Include(m => m.Participants)
+            .Include(m => m.Recordings)
             .FirstOrDefaultAsync(m => m.RoomCode == request.RoomCode, cancellationToken);
 
         if (meeting == null)
@@ -49,9 +52,40 @@ public class DisconnectFromMeetingHandler : IRequestHandler<DisconnectFromMeetin
                 p.Id != participant.Id && 
                 p.Role == ParticipantRole.Host);
                 
-            // If no hosts remain, blank the sessionId
+            // If no hosts remain, handle host disconnection
             if (remainingHosts == 0)
             {
+                // Stop any active recordings
+                var activeRecordings = meeting.Recordings.Where(r => r.Status == RecordingStatus.Recording).ToList();
+                foreach (var recording in activeRecordings)
+                {
+                    try
+                    {
+                        await _vonageService.StopRecordingAsync(recording.RecordingId, cancellationToken);
+                        recording.Status = RecordingStatus.Completed;
+                        recording.CompletedAt = DateTime.UtcNow;
+                        _context.MeetingRecordings.Update(recording);
+                    }
+                    catch (Exception)
+                    {
+                        // Log error but continue with disconnection process
+                    }
+                }
+                
+                // Signal host disconnection to all participants
+                if (!string.IsNullOrEmpty(meeting.SessionId))
+                {
+                    try
+                    {
+                        await _vonageService.SignalHostDisconnection(meeting.SessionId, cancellationToken);
+                    }
+                    catch (Exception)
+                    {
+                        // Log error but continue with disconnection process
+                    }
+                }
+                
+                // Clear the sessionId
                 meeting.SessionId = string.Empty;
                 _context.Meetings.Update(meeting);
             }
