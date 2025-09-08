@@ -21,7 +21,7 @@ public static class MeetingEndpoints
             .WithName("CreateMeeting")
             .WithSummary("Create a new meeting")
             .WithDescription("Creates a new video meeting with Vonage session")
-            .RequireAuthorization()
+            // .RequireAuthorization()
             .Produces<ApiResponse<MeetingResponseDto>>(StatusCodes.Status201Created)
             .Produces<ApiResponse>(StatusCodes.Status400BadRequest)
             .Produces<ApiResponse>(StatusCodes.Status401Unauthorized);
@@ -127,7 +127,6 @@ public static class MeetingEndpoints
     {
         try
         {
-            var userId = GetUserId(user);
             var command = new CreateMeetingCommand(
                 request.Title,
                 request.Description,
@@ -135,7 +134,8 @@ public static class MeetingEndpoints
                 // request.IsRecordingEnabled,
                 request.IsScreenSharingEnabled,
                 request.MaxParticipants,
-                userId
+                request.CreatedById,
+                request.RoomCode
             );
 
             var response = await mediator.Send(command);
@@ -184,16 +184,24 @@ public static class MeetingEndpoints
 
     private static async Task<IResult> JoinMeetingAsync(
         string roomCode,
+        JoinMeetingRequest request,
         ClaimsPrincipal user,
         IMediator mediator)
     {
         try
         {
-            var userId = GetUserId(user);
+            // var userId = GetUserId(user);
+            var currentUser = GetCurrentUser(user);
+            if (currentUser == null)
+                return ResultExtensions.ToUnauthorizedResponse();
+            
+            var userId = long.Parse(currentUser.UserId);
             if (userId == 0)
                 return ResultExtensions.ToUnauthorizedResponse();
-
-            var command = new JoinMeetingCommand(roomCode, userId,"");
+            
+            var fullName = currentUser.FirstName + " " + currentUser.LastName;
+            var userEmail = currentUser.UsrEmail;
+            var command = new JoinMeetingCommand(roomCode, userId,currentUser.RoleName,fullName,userEmail);
             var participant = await mediator.Send(command);
             return participant.ToApiResponse("Successfully joined meeting");
         }
@@ -341,7 +349,11 @@ public static class MeetingEndpoints
     {
         try
         {
-            var userId = GetUserId(user);
+            var currentUser = GetCurrentUser(user);
+            if (currentUser == null)
+                return ResultExtensions.ToUnauthorizedResponse();
+            
+            var userId = long.Parse(currentUser.UserId);
             if (userId == 0)
                 return ResultExtensions.ToUnauthorizedResponse();
 
@@ -361,9 +373,33 @@ public static class MeetingEndpoints
 
     private static int GetUserId(ClaimsPrincipal user)
     {
-        var userIdClaim = user.FindFirst("userId")?.Value;
+        var userIdClaim = user.FindFirst("UserId")?.Value;
         return int.TryParse(userIdClaim, out var userId) ? userId : 0;
     }
+    
+    private static UserClaims? GetCurrentUser(ClaimsPrincipal? user)
+    {
+        if (user == null) return null!;
+
+        return new UserClaims(
+            UserId: user.FindFirst("UserId")?.Value ?? string.Empty,
+            GuId: user.FindFirst("GuId")?.Value ?? string.Empty,
+            RoleId: user.FindFirst("roleid")?.Value ?? string.Empty,
+            RoleName: user.FindFirst("rolename")?.Value ?? string.Empty,
+            FirstName: user.FindFirst("firstname")?.Value ?? string.Empty,
+            LastName: user.FindFirst("lastname")?.Value ?? string.Empty,
+            UsrEmail: user.FindFirst("usr_email")?.Value ?? string.Empty,
+            Mobile: user.FindFirst("mobile")?.Value ?? string.Empty,
+            CreationDate: user.FindFirst("creationdate")?.Value ?? string.Empty,
+            IsActive: user.FindFirst("isactive")?.Value ?? string.Empty,
+            AsrId: user.FindFirst("asr_id")?.Value ?? string.Empty,
+            AllctdPrgms: user.FindFirst("allctd_prgms")?.Value ?? string.Empty,
+            Exp: long.TryParse(user.FindFirst("exp")?.Value, out var expVal) ? expVal : 0,
+            Iss: user.FindFirst("iss")?.Value ?? string.Empty,
+            Aud: user.FindFirst("aud")?.Value ?? string.Empty
+        );
+    }
+
 }
 
 // Request DTOs
@@ -371,9 +407,11 @@ public record CreateMeetingRequest(
     string Title,
     string? Description,
     DateTime ScheduledAt,
+    long CreatedById,
     bool IsRecordingEnabled = false,
     bool IsScreenSharingEnabled = true,
-    int MaxParticipants = 50
+    int MaxParticipants = 20,
+    string? RoomCode = null
 );
 
 public record JoinMeetingAsGuestRequest(
@@ -381,6 +419,30 @@ public record JoinMeetingAsGuestRequest(
     string? GuestEmail = null
 );
 
+public record JoinMeetingRequest(
+    string? UserName,
+    string? UserRole,
+    string? UserEmail = null
+);
+
 public record StartRecordingRequest(
     string? RecordingName = null
+);
+
+public record UserClaims(
+    string UserId,
+    string GuId,
+    string RoleId,
+    string RoleName,
+    string FirstName,
+    string LastName,
+    string UsrEmail,
+    string Mobile,
+    string CreationDate,
+    string IsActive,
+    string AsrId,
+    string AllctdPrgms,
+    long Exp,
+    string Iss,
+    string Aud
 );

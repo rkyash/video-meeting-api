@@ -31,11 +31,11 @@ public class JoinMeetingHandler : IRequestHandler<JoinMeetingCommand, Participan
         if (meeting.Status == MeetingStatus.Ended)
             throw new InvalidOperationException("Meeting has ended");
 
-        var user = await _context.Users
-            .FirstOrDefaultAsync(u => u.Id == request.UserId, cancellationToken);
-
-        if (user == null)
-            throw new KeyNotFoundException("User not found");
+        // var user = await _context.Users
+        //     .FirstOrDefaultAsync(u => u.Id == request.UserId, cancellationToken);
+        //
+        // if (user == null)
+        //     throw new KeyNotFoundException("User not found");
 
         // Handle session management for Assessors (Hosts)
         if (request.UserRole == "Assessor")
@@ -66,7 +66,7 @@ public class JoinMeetingHandler : IRequestHandler<JoinMeetingCommand, Participan
         // If participant already active, generate token and return existing record
         if (existingParticipant != null && existingParticipant.LeftAt == null)
         {
-            var participantToken = GenerateTokenForParticipant(meeting.SessionId, request.UserRole);
+            var participantToken = GenerateTokenForParticipant(meeting.SessionId, request.UserRole,request.UserName);
             
             return new ParticipantDto(
                 existingParticipant.Id,
@@ -115,6 +115,8 @@ public class JoinMeetingHandler : IRequestHandler<JoinMeetingCommand, Participan
             {
                 MeetingId = meeting.Id,
                 UserId = request.UserId,
+                UserName = request.UserName,
+                UserEmail = request.UserEmail,
                 Role = participantRole,
                 JoinedAt = DateTime.UtcNow,
                 IsMuted = true,
@@ -135,7 +137,7 @@ public class JoinMeetingHandler : IRequestHandler<JoinMeetingCommand, Participan
         await _context.SaveChangesAsync(cancellationToken);
 
         // Generate token for the participant
-        var participantTokenFinal = GenerateTokenForParticipant(meeting.SessionId, request.UserRole);
+        var participantTokenFinal = GenerateTokenForParticipant(meeting.SessionId, request.UserRole,request.UserName);
 
         return new ParticipantDto(
             participant.Id,
@@ -155,7 +157,7 @@ public class JoinMeetingHandler : IRequestHandler<JoinMeetingCommand, Participan
         );
     }
 
-    private string? GenerateTokenForParticipant(string? sessionId, string userRole)
+    private string? GenerateTokenForParticipant(string? sessionId, string userRole,string ? userName = null)
     {
         if (string.IsNullOrEmpty(sessionId))
             return null;

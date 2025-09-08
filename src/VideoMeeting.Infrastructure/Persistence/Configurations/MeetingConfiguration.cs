@@ -22,7 +22,7 @@ public class MeetingConfiguration : IEntityTypeConfiguration<Meeting>
             .HasMaxLength(1000);
 
         builder.Property(m => m.SessionId)
-            .HasMaxLength(100)
+            .HasMaxLength(250)
             .IsRequired();
 
         builder.Property(m => m.RoomCode)

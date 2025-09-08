@@ -21,10 +21,9 @@ public class MeetingParticipant : BaseEntity
     public int JoinCount { get; set; } = 1;
 
     public virtual Meeting Meeting { get; set; } = null!;
-    public virtual User? User { get; set; }
 
     public bool IsGuest => UserId == null;
     public bool IsActive => LeftAt == null;
-    public string DisplayName => User?.FullName ?? GuestName ?? "Unknown User";
+    public string DisplayName =>  "Unknown User";
     public TimeSpan? SessionDuration => LeftAt?.Subtract(JoinedAt) ?? DateTime.UtcNow.Subtract(JoinedAt);
 }

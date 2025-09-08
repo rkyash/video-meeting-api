@@ -7,7 +7,7 @@ namespace VideoMeeting.Application.Common.Interfaces;
 public interface IVonageService
 {
     Task<ApiResponse<string>>  CreateSession();
-    ApiResponse<string> GenerateToken(string sessionId, string role = "publisher");
+    ApiResponse<string> GenerateToken(string sessionId, string role = "publisher", string userName = "Unknown");
 
     Task<ApiResponse<Archive>> StartRecordingAsync(string SessionId,
         CancellationToken cancellationToken = default);

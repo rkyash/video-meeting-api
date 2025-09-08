@@ -30,24 +30,31 @@ public static class AuthEndpoints
             .WithDescription("Validates user credentials and returns JWT token")
             .Produces<ApiResponse<AuthResponseDto>>()
             .Produces<ApiResponse>(StatusCodes.Status401Unauthorized);
+        //
+        // group.MapGet("/profile", GetProfileAsync)
+        //     .WithName("GetProfile")
+        //     .WithSummary("Get current user profile")
+        //     .WithDescription("Returns the current authenticated user's profile information")
+        //     .RequireAuthorization()
+        //     .Produces<ApiResponse<UserProfileDto>>()
+        //     .Produces<ApiResponse>(StatusCodes.Status401Unauthorized)
+        //     .Produces<ApiResponse>(StatusCodes.Status404NotFound);
 
-        group.MapGet("/profile", GetProfileAsync)
-            .WithName("GetProfile")
-            .WithSummary("Get current user profile")
-            .WithDescription("Returns the current authenticated user's profile information")
-            .RequireAuthorization()
-            .Produces<ApiResponse<UserProfileDto>>()
-            .Produces<ApiResponse>(StatusCodes.Status401Unauthorized)
-            .Produces<ApiResponse>(StatusCodes.Status404NotFound);
+        // group.MapPost("/change-password", ChangePasswordAsync)
+        //     .WithName("ChangePassword")
+        //     .WithSummary("Change user password")
+        //     .WithDescription("Updates the current user's password")
+        //     .RequireAuthorization()
+        //     .Produces<ApiResponse>(StatusCodes.Status204NoContent)
+        //     .Produces<ApiResponse>(StatusCodes.Status400BadRequest)
+        //     .Produces<ApiResponse>(StatusCodes.Status401Unauthorized);
 
-        group.MapPost("/change-password", ChangePasswordAsync)
-            .WithName("ChangePassword")
-            .WithSummary("Change user password")
-            .WithDescription("Updates the current user's password")
-            .RequireAuthorization()
-            .Produces<ApiResponse>(StatusCodes.Status204NoContent)
-            .Produces<ApiResponse>(StatusCodes.Status400BadRequest)
-            .Produces<ApiResponse>(StatusCodes.Status401Unauthorized);
+        group.MapPost("/validate-token", ValidateTokenAsync)
+            .WithName("ValidateToken")
+            .WithSummary("Validate JWT token")
+            .WithDescription("Validates a JWT token and returns validation details")
+            .Produces<ApiResponse<TokenValidationResult>>()
+            .Produces<ApiResponse>(StatusCodes.Status400BadRequest);
     }
 
     private static async Task<IResult> RegisterAsync(
@@ -88,47 +95,62 @@ public static class AuthEndpoints
         }
     }
 
-    private static async Task<IResult> GetProfileAsync(
-        ClaimsPrincipal user,
+    // private static async Task<IResult> GetProfileAsync(
+    //     ClaimsPrincipal user,
+    //     IAuthService authService)
+    // {
+    //     var userId = GetUserId(user);
+    //     if (userId == 0)
+    //         return ResultExtensions.ToUnauthorizedResponse();
+    //
+    //     var userEntity = await authService.GetUserByIdAsync(userId);
+    //
+    //     if (userEntity == null)
+    //         return ResultExtensions.ToNotFoundResponse("User not found");
+    //
+    //     var profile = new UserProfileDto(
+    //         userEntity.Id,
+    //         userEntity.Email,
+    //         userEntity.FirstName,
+    //         userEntity.LastName,
+    //         userEntity.CreatedAt,
+    //         userEntity.LastLoginAt,
+    //         userEntity.IsActive
+    //     );
+    //
+    //     return profile.ToApiResponse("Profile retrieved successfully");
+    // }
+
+    // private static async Task<IResult> ChangePasswordAsync(
+    //     ChangePasswordRequest request,
+    //     ClaimsPrincipal user,
+    //     IAuthService authService)
+    // {
+    //     var userId = GetUserId(user);
+    //     if (userId == 0)
+    //         return ResultExtensions.ToUnauthorizedResponse();
+    //
+    //     var success = await authService.ChangePasswordAsync(userId, request.CurrentPassword, request.NewPassword);
+    //
+    //     if (!success)
+    //         return ResultExtensions.ToBadRequestResponse("Current password is incorrect");
+    //
+    //     return ResultExtensions.ToNoContentResponse("Password changed successfully");
+    // }
+
+    private static async Task<IResult> ValidateTokenAsync(
+        ValidateTokenRequest request,
         IAuthService authService)
     {
-        var userId = GetUserId(user);
-        if (userId == 0)
-            return ResultExtensions.ToUnauthorizedResponse();
-
-        var userEntity = await authService.GetUserByIdAsync(userId);
-
-        if (userEntity == null)
-            return ResultExtensions.ToNotFoundResponse("User not found");
-
-        var profile = new UserProfileDto(
-            userEntity.Id,
-            userEntity.Email,
-            userEntity.FirstName,
-            userEntity.LastName,
-            userEntity.CreatedAt,
-            userEntity.LastLoginAt,
-            userEntity.IsActive
-        );
-
-        return profile.ToApiResponse("Profile retrieved successfully");
-    }
-
-    private static async Task<IResult> ChangePasswordAsync(
-        ChangePasswordRequest request,
-        ClaimsPrincipal user,
-        IAuthService authService)
-    {
-        var userId = GetUserId(user);
-        if (userId == 0)
-            return ResultExtensions.ToUnauthorizedResponse();
-
-        var success = await authService.ChangePasswordAsync(userId, request.CurrentPassword, request.NewPassword);
-
-        if (!success)
-            return ResultExtensions.ToBadRequestResponse("Current password is incorrect");
-
-        return ResultExtensions.ToNoContentResponse("Password changed successfully");
+        try
+        {
+            var result = await authService.ValidateJwtTokenAsync(request.Token);
+            return result.ToApiResponse("Token validation completed");
+        }
+        catch (Exception ex)
+        {
+            return ResultExtensions.ToBadRequestResponse(ex.Message);
+        }
     }
 
     private static int GetUserId(ClaimsPrincipal user)
@@ -139,3 +161,5 @@ public static class AuthEndpoints
 }
 
 public record ChangePasswordRequest(string CurrentPassword, string NewPassword);
+
+public record ValidateTokenRequest(string Token);

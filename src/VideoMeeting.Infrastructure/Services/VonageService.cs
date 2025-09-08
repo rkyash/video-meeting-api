@@ -78,7 +78,7 @@ public class VonageService : IVonageService
         }
     }
 
-    public ApiResponse<string> GenerateToken(string sessionId, string role = "publisher")
+    public ApiResponse<string> GenerateToken(string sessionId, string role = "publisher", string userName = "Unknown")
     {
         var expireTime = DateTimeOffset.UtcNow.AddHours(24).ToUnixTimeSeconds();
         var tokenRole = role.ToLower() switch
@@ -105,7 +105,7 @@ public class VonageService : IVonageService
                 claims: new Dictionary<string, object>
                 {
                     { "exp", expireTime}, // Expiry time of 60 minutes
-                    { "data", "userName" }
+                    { "data", userName }
                 }
             );
             // Generate the token

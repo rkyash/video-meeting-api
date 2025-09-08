@@ -22,9 +22,6 @@ public class CreateMeetingCommandHandler : IRequestHandler<CreateMeetingCommand,
 
     public async Task<MeetingResponseDto> Handle(CreateMeetingCommand request, CancellationToken cancellationToken)
     {
-        // var sessionId = await _vonageService.CreateSession();
-        // var token = _vonageService.GenerateToken(sessionId.Data.ToString());
-        
         Meeting meeting;
 
         // Check if RoomCode is provided and if a meeting with that RoomCode already exists
@@ -106,7 +103,7 @@ public class CreateMeetingCommandHandler : IRequestHandler<CreateMeetingCommand,
             meeting.EndedAt,
             meeting.CreatedAt,
             meeting.CreatedById,
-            meeting.CreatedBy?.FullName ?? "Unknown User",
+            "" ?? "Unknown User",
             meeting.IsRecordingEnabled,
             meeting.IsScreenSharingEnabled,
             meeting.MaxParticipants,

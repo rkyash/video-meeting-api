@@ -1,5 +1,6 @@
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
 using Serilog;
@@ -78,10 +79,29 @@ builder.Services.AddOpenApi();
 var app = builder.Build();
 
 // Ensure database is created
+// Replace EnsureCreated() with migrations
 using (var scope = app.Services.CreateScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    context.Database.EnsureCreated();
+    
+    if (app.Environment.IsDevelopment())
+    {
+        await context.Database.MigrateAsync(); // Auto-apply in development
+    }
+    else
+    {
+        // Production: Check for pending migrations
+        var pendingMigrations = await context.Database.GetPendingMigrationsAsync();
+        if (pendingMigrations.Any())
+        {
+            var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+            logger.LogWarning("Pending migrations: {Migrations}", 
+                string.Join(", ", pendingMigrations));
+            
+            // Uncomment to auto-apply in production (use with caution)
+            await context.Database.MigrateAsync();
+        }
+    }
 }
 
 // Configure the HTTP request pipeline

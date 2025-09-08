@@ -12,7 +12,7 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     {
     }
 
-    public DbSet<User> Users => Set<User>();
+    // public DbSet<User> Users => Set<User>();
     public DbSet<Meeting> Meetings => Set<Meeting>();
     public DbSet<MeetingParticipant> MeetingParticipants => Set<MeetingParticipant>();
     public DbSet<MeetingRecording> MeetingRecordings => Set<MeetingRecording>();
@@ -34,7 +34,7 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     {
         base.OnModelCreating(modelBuilder);
 
-        modelBuilder.ApplyConfiguration(new UserConfiguration());
+        // modelBuilder.ApplyConfiguration(new UserConfiguration());
         modelBuilder.ApplyConfiguration(new MeetingConfiguration());
         modelBuilder.ApplyConfiguration(new MeetingParticipantConfiguration());
         modelBuilder.ApplyConfiguration(new MeetingRecordingConfiguration());

@@ -18,3 +18,14 @@ public record UserProfileDto(
     DateTime? LastLoginAt,
     bool IsActive
 );
+
+public record TokenValidationResult(
+    bool IsValid,
+    string? ErrorMessage,
+    DateTime? ExpiresAt,
+    long? UserId,
+    string? Email,
+    string? FullName,
+    bool IsExpired,
+    bool HasValidSignature
+);

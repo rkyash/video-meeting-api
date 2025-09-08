@@ -33,14 +33,10 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(u => u.IsActive)
             .HasDefaultValue(true);
 
-        builder.HasMany(u => u.CreatedMeetings)
-            .WithOne(m => m.CreatedBy)
-            .HasForeignKey(m => m.CreatedById)
-            .OnDelete(DeleteBehavior.Restrict);
-
-        builder.HasMany(u => u.MeetingParticipants)
-            .WithOne(mp => mp.User)
-            .HasForeignKey(mp => mp.UserId)
-            .OnDelete(DeleteBehavior.SetNull);
+        // builder.HasMany(u => u.CreatedMeetings)
+        //     .WithOne(m => m.CreatedBy)
+        //     .HasForeignKey(m => m.CreatedById)
+        //     .OnDelete(DeleteBehavior.Restrict);
+        
     }
 }

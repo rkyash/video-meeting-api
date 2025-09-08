@@ -7,5 +7,6 @@ public record JoinMeetingCommand(
     string RoomCode,
     long UserId,
     string UserRole,
-    string? UserName = null
+    string? UserName = null,
+    string? UserEmail = null
 ) : IRequest<ParticipantDto>;

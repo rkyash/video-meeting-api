@@ -5,7 +5,7 @@ namespace VideoMeeting.Application.Common.Interfaces;
 
 public interface IApplicationDbContext
 {
-    DbSet<User> Users { get; }
+    // DbSet<User> Users { get; }
     DbSet<Meeting> Meetings { get; }
     DbSet<MeetingParticipant> MeetingParticipants { get; }
     DbSet<MeetingRecording> MeetingRecordings { get; }

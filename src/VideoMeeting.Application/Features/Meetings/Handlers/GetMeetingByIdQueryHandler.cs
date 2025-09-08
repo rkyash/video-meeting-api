@@ -36,7 +36,7 @@ public class GetMeetingByIdQueryHandler : IRequestHandler<GetMeetingByIdQuery, M
             meeting.EndedAt,
             meeting.CreatedAt,
             meeting.CreatedById,
-            meeting.CreatedBy?.FullName ?? "Unknown User",
+             "Unknown User",
             meeting.IsRecordingEnabled,
             meeting.IsScreenSharingEnabled,
             meeting.MaxParticipants,
@@ -77,7 +77,7 @@ public class GetMeetingByRoomCodeQueryHandler : IRequestHandler<GetMeetingByRoom
             meeting.EndedAt,
             meeting.CreatedAt,
             meeting.CreatedById,
-            meeting.CreatedBy?.FullName ?? "Unknown User",
+            "" ?? "Unknown User",
             meeting.IsRecordingEnabled,
             meeting.IsScreenSharingEnabled,
             meeting.MaxParticipants,
@@ -110,7 +110,7 @@ public class GetUserMeetingsQueryHandler : IRequestHandler<GetUserMeetingsQuery,
                 m.ScheduledAt,
                 m.StartedAt,
                 m.EndedAt,
-                m.CreatedBy != null ? m.CreatedBy.FullName : "Unknown User",
+                "Unknown User",
                 m.Status,
                 m.Participants.Count(p => p.LeftAt == null),
                 m.IsRecordingEnabled
@@ -134,13 +134,12 @@ public class GetMeetingParticipantsQueryHandler : IRequestHandler<GetMeetingPart
         CancellationToken cancellationToken)
     {
         var participants = await _context.MeetingParticipants
-            .Include(p => p.User)
             .Where(p => p.MeetingId == request.MeetingId && p.LeftAt == null)
             .Select(p => new ParticipantDto(
                 p.Id,
                 p.MeetingId,
                 p.UserId,
-                p.User != null ? p.User.FullName : null,
+                 null,
                 p.GuestName,
                 p.GuestEmail,
                 p.JoinedAt,

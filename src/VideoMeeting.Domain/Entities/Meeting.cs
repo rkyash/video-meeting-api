@@ -7,7 +7,7 @@ public class Meeting : BaseAuditableEntity
 {
     public string Title { get; set; } = string.Empty;
     public string? Description { get; set; }
-    public string SessionId { get; set; } = string.Empty;
+    public string? SessionId { get; set; } 
     public string RoomCode { get; set; } = string.Empty;
     public DateTime ScheduledAt { get; set; }
     public DateTime? StartedAt { get; set; }
@@ -17,7 +17,7 @@ public class Meeting : BaseAuditableEntity
     public int MaxParticipants { get; set; } = 15;
     public MeetingStatus Status { get; set; } = MeetingStatus.Scheduled;
 
-    public virtual User? CreatedBy { get; set; }
+    public long?  CreatedBy { get; set; }
     public virtual ICollection<MeetingParticipant> Participants { get; set; } = new List<MeetingParticipant>();
     public virtual ICollection<MeetingRecording> Recordings { get; set; } = new List<MeetingRecording>();
 
