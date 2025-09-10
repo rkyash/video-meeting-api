@@ -12,11 +12,11 @@ public class MeetingRecordingConfiguration : IEntityTypeConfiguration<MeetingRec
         builder.HasKey(mr => mr.Id);
 
         builder.Property(mr => mr.SessionId)
-            .HasMaxLength(100)
+            .HasMaxLength(250)
             .IsRequired();
 
         builder.Property(mr => mr.RecordingId)
-            .HasMaxLength(100)
+            .HasMaxLength(250)
             .IsRequired();
 
         builder.Property(mr => mr.FileName)

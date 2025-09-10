@@ -5,6 +5,7 @@ using VideoMeeting.Application.Features.Meetings.Commands;
 using VideoMeeting.Application.Features.Meetings.DTOs;
 using VideoMeeting.Domain.Entities;
 using VideoMeeting.Domain.Enums;
+using VideoMeeting.Shared;
 using VideoMeeting.Shared.Configuration;
 
 namespace VideoMeeting.Application.Features.Meetings.Handlers;
@@ -31,8 +32,8 @@ public class JoinMeetingHandler : IRequestHandler<JoinMeetingCommand, Participan
         if (meeting == null)
             throw new KeyNotFoundException("Meeting not found");
 
-        if (meeting.Status == MeetingStatus.Ended)
-            throw new InvalidOperationException("Meeting has ended");
+        if (!request.UserRole.Equals(RoleConstants.Assessor) && (meeting.Status == MeetingStatus.Ended || meeting.Status == MeetingStatus.Cancelled))
+            throw new InvalidOperationException("Meeting has ended or not started");
 
         // var user = await _context.Users
         //     .FirstOrDefaultAsync(u => u.Id == request.UserId, cancellationToken);
@@ -41,7 +42,7 @@ public class JoinMeetingHandler : IRequestHandler<JoinMeetingCommand, Participan
         //     throw new KeyNotFoundException("User not found");
 
         // Handle session management for Assessors (Hosts)
-        if (request.UserRole == "Assessor")
+        if (request.UserRole == RoleConstants.Assessor)
         {
             // Check if meeting has a sessionId, if not create one
             if (string.IsNullOrEmpty(meeting.SessionId))
@@ -132,9 +133,10 @@ public class JoinMeetingHandler : IRequestHandler<JoinMeetingCommand, Participan
             _context.MeetingParticipants.Add(participant);
         }
 
-        if (meeting.Status == MeetingStatus.Scheduled)
+        if (meeting.Status == MeetingStatus.Scheduled || meeting.Status == MeetingStatus.Ended || meeting.Status == MeetingStatus.Cancelled)
         {
             meeting.Status = MeetingStatus.Active;
+            meeting.IsRecordingEnabled = true;
             meeting.StartedAt = DateTime.UtcNow;
         }
 

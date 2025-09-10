@@ -28,15 +28,15 @@ public class VonageService : IVonageService
     private readonly VonageClient _client;
     private readonly SemaphoreSlim _archiveSemaphore = new SemaphoreSlim(1, 1);
 
-    public VonageService(VonageConfiguration vonageConfig,IVideoTokenGenerator tokenGenerator)
+    public VonageService(VonageConfiguration vonageConfig, IVideoTokenGenerator tokenGenerator)
     {
         _vonageConfig = vonageConfig;
-        
+
         if (string.IsNullOrEmpty(_vonageConfig.ApplicationId) || string.IsNullOrEmpty(_vonageConfig.PrivateKeyPath))
             throw new InvalidOperationException("Vonage configuration is missing required values");
-        
+
         var applicationId = _vonageConfig.ApplicationId;
-        var privateKeyPath =  Path.Combine(Environment.CurrentDirectory,_vonageConfig.PrivateKeyPath);
+        var privateKeyPath = Path.Combine(Environment.CurrentDirectory, _vonageConfig.PrivateKeyPath);
         _credentials = Credentials.FromAppIdAndPrivateKeyPath(applicationId, privateKeyPath);
         _tokenGenerator = tokenGenerator;
         _client = new VonageClient(_credentials);
@@ -54,7 +54,7 @@ public class VonageService : IVonageService
                 .WithArchiveMode(ArchiveMode.Manual)
                 .Create();
             // Send the request to the API
-            var response= await _videoClient.SessionClient.CreateSessionAsync(request);
+            var response = await _videoClient.SessionClient.CreateSessionAsync(request);
             return response.Match(
                 success => new ApiResponse<string>
                 {
@@ -70,7 +70,7 @@ public class VonageService : IVonageService
         }
         catch (Exception ex)
         {
-            return  new ApiResponse<string>
+            return new ApiResponse<string>
             {
                 Success = false,
                 Message = $"Exception occurred: {ex.Message}"
@@ -87,7 +87,7 @@ public class VonageService : IVonageService
             "subscriber" => Role.Subscriber,
             _ => Role.Publisher
         };
-        
+
         try
         {
             if (string.IsNullOrWhiteSpace(sessionId))
@@ -98,13 +98,14 @@ public class VonageService : IVonageService
                     Message = "Session ID cannot be null or empty."
                 };
             }
+
             // Define the additional claims with expiration time
             var claims = TokenAdditionalClaims.Parse(
                 sessionId,
                 role: tokenRole,
                 claims: new Dictionary<string, object>
                 {
-                    { "exp", expireTime}, // Expiry time of 60 minutes
+                    { "exp", expireTime }, // Expiry time of 60 minutes
                     { "connection_data", userName }
                 }
             );
@@ -120,7 +121,7 @@ public class VonageService : IVonageService
                 },
                 failure => new ApiResponse<string>
                 {
-                   Success = false,
+                    Success = false,
                     Message = $"Failed to generate token: {failure.GetFailureMessage()} \n{failure.ToException()}"
                 }
             );
@@ -135,7 +136,7 @@ public class VonageService : IVonageService
         }
     }
 
-  
+
     public async Task<ApiResponse<string>> StartRecordingAsync_1(string sessionId,
         CancellationToken cancellationToken = default)
     {
@@ -149,15 +150,14 @@ public class VonageService : IVonageService
                 .WithOutputMode(OutputMode.Composed)
                 .WithResolution(RenderResolution.HighDefinitionLandscape)
                 .Create();
-            
+
             var archiveResponse = await _videoClient.ArchiveClient.CreateArchiveAsync(request);
-            
+
             return archiveResponse.Match(
                 success => new ApiResponse<string>()
                 {
                     Success = true,
-                    Data =  success.Id
-                    
+                    Data = success.Id
                 },
                 failure => new ApiResponse<string>
                 {
@@ -168,10 +168,9 @@ public class VonageService : IVonageService
         }
         catch (Exception ex)
         {
-
             return new ApiResponse<string>()
             {
-                Success               = false,
+                Success = false,
                 Message = $"Exception:{ex.Message}, Inner Exception:{ex?.InnerException?.Message}"
             };
         }
@@ -181,11 +180,12 @@ public class VonageService : IVonageService
         }
     }
 
-    public async Task<ApiResponse<Archive>> StartRecordingAsync(string sessionId,CancellationToken cancellationToken = default)
+    public async Task<ApiResponse<Archive>> StartRecordingAsync1(string sessionId,
+        CancellationToken cancellationToken = default)
     {
         const int maxRetries = 3;
         var applicationId = Guid.Parse(_vonageConfig.ApplicationId);
-        
+
         var request = CreateArchiveRequest.Build()
             .WithApplicationId(applicationId)
             .WithSessionId(sessionId)
@@ -236,7 +236,7 @@ public class VonageService : IVonageService
                         Message = $"Failed to retrieve existing archives: {recordedData.Message}"
                     };
                 }
-                   
+
 
                 if (attempt < maxRetries)
                     await Task.Delay(1000 * attempt); // Exponential backoff delay
@@ -258,8 +258,100 @@ public class VonageService : IVonageService
         };
     }
 
-    
-    public async Task<ApiResponse<object>> StopRecordingAsync(string archiveId,CancellationToken cancellationToken = default)
+    public async Task<ApiResponse<Archive>> StartRecordingAsync(string sessionId,
+        CancellationToken cancellationToken = default)
+    {
+        const int maxRetries = 3;
+        var applicationId = Guid.Parse(_vonageConfig.ApplicationId);
+
+        var request = CreateArchiveRequest.Build()
+            .WithApplicationId(applicationId)
+            .WithSessionId(sessionId)
+            .WithOutputMode(OutputMode.Composed)
+            .WithResolution(RenderResolution.HighDefinitionLandscape)
+            .Create();
+
+        for (int attempt = 1; attempt <= maxRetries; attempt++)
+        {
+            try
+            {
+                var archiveResponse = await _videoClient.ArchiveClient.CreateArchiveAsync(request);
+
+                return await archiveResponse.Match(
+                    success => Task.FromResult(new ApiResponse<Archive>
+                    {
+                        Success = true,
+                        Data = success
+                    }),
+                    async failure =>
+                    {
+                        // Try to get existing active archive on failure
+                        var recordedData = await GetArchiveBySessionIdAsync(sessionId);
+
+                        if (recordedData.Success)
+                        {
+                            var activeArchive = recordedData.Data.Items.FirstOrDefault(x => x.Status == "started");
+
+                            if (!string.IsNullOrEmpty(activeArchive.Id))
+                            {
+                                return new ApiResponse<Archive>
+                                {
+                                    Success = true,
+                                    Data = activeArchive
+                                };
+                            }
+                        }
+
+                        return new ApiResponse<Archive>
+                        {
+                            Success = false,
+                            Message =
+                                $"Failed to create archive: {failure.GetFailureMessage()} /n{failure.ToException()}"
+                        };
+                    }
+                );
+            }
+            catch (VonageException ex) when (ex.Message.Contains("409"))
+            {
+                var recordedData = await GetArchiveBySessionIdAsync(sessionId);
+
+                if (recordedData.Success)
+                {
+                    var activeArchive = recordedData.Data.Items.FirstOrDefault(x => x.Status == "started");
+
+                    if (!string.IsNullOrEmpty(activeArchive.Id))
+                    {
+                        return new ApiResponse<Archive>
+                        {
+                            Success = true,
+                            Data = activeArchive
+                        };
+                    }
+                }
+
+                if (attempt < maxRetries)
+                    await Task.Delay(1000 * attempt, cancellationToken); // Exponential backoff
+            }
+            catch (Exception ex)
+            {
+                return new ApiResponse<Archive>
+                {
+                    Success = false,
+                    Message = $"Exception: {ex.Message}, Inner Exception: {ex?.InnerException?.Message}"
+                };
+            }
+        }
+
+        return new ApiResponse<Archive>
+        {
+            Success = false,
+            Message = "Max retry attempts reached. Could not start archive."
+        };
+    }
+
+
+    public async Task<ApiResponse<object>> StopRecordingAsync(string archiveId,
+        CancellationToken cancellationToken = default)
     {
         await _archiveSemaphore.WaitAsync();
         try
@@ -270,9 +362,9 @@ public class VonageService : IVonageService
                 .WithApplicationId(applicationId)
                 .WithArchiveId(guidArchiveId)
                 .Create();
-            
+
             var archiveResponse = await _videoClient.ArchiveClient.StopArchiveAsync(request);
-            
+
             return archiveResponse.Match(
                 success => new ApiResponse<object>()
                 {
@@ -281,17 +373,16 @@ public class VonageService : IVonageService
                 },
                 failure => new ApiResponse<Object>
                 {
-                   Success = false,
+                    Success = false,
                     Message = $"Failed to create archive: {failure.GetFailureMessage()} /n {failure.ToException()}"
                 }
             );
         }
         catch (Exception ex)
         {
-
             return new ApiResponse()
             {
-                Success                  = false,
+                Success = false,
                 Message = $"Exception:{ex.Message}, Inner Exception:{ex?.InnerException?.Message}"
             };
         }
@@ -300,7 +391,7 @@ public class VonageService : IVonageService
             _archiveSemaphore.Release();
         }
     }
-  
+
     public async Task<ApiResponse<Archive>> GetArchiveAsync(string archiveId)
     {
         try
@@ -316,7 +407,7 @@ public class VonageService : IVonageService
             return response.Match(
                 success => new ApiResponse<Archive>()
                 {
-                  Success = true,
+                    Success = true,
                     Data = success
                 },
                 failure => new ApiResponse<Archive>()
@@ -330,23 +421,22 @@ public class VonageService : IVonageService
         {
             return new ApiResponse<Archive>()
             {
-                Success = false,                
+                Success = false,
                 Message = $"Exception:{ex.Message}, Inner Exception:{ex?.InnerException?.Message}"
             };
         }
-       
-        
     }
-    
-   
-    public async Task<ApiResponse<object>> SignalHostDisconnection(string sessionId, CancellationToken cancellationToken = default)
+
+
+    public async Task<ApiResponse<object>> SignalHostDisconnection(string sessionId,
+        CancellationToken cancellationToken = default)
     {
         try
         {
             Guid applicationId = new Guid(_vonageConfig.ApplicationId);
 
             var signalData = new SignalContent("hostDisconnected", "The host has ended the session");
-           
+
             var request = SendSignalsRequest.Build()
                 .WithApplicationId(applicationId)
                 .WithSessionId(sessionId)
@@ -360,10 +450,10 @@ public class VonageService : IVonageService
                     Message = "Signal sent successfully",
                     Data = success
                 },
-                failure =>  new ApiResponse<object>()
+                failure => new ApiResponse<object>()
                 {
                     Success = true,
-                    Message =  $"Failed to create archive: {failure.GetFailureMessage()}\n{failure.ToException()}"
+                    Message = $"Failed to create archive: {failure.GetFailureMessage()}\n{failure.ToException()}"
                 }
             );
         }
@@ -372,11 +462,11 @@ public class VonageService : IVonageService
             return new ApiResponse<object>()
             {
                 Success = true,
-                Message =  $"{ex.Message}\n{ex?.InnerException?.Message}"
+                Message = $"{ex.Message}\n{ex?.InnerException?.Message}"
             };
         }
     }
-    
+
     public async Task<ApiResponse<GetArchivesResponse>> GetArchiveBySessionIdAsync(string sessionId)
     {
         try
@@ -405,15 +495,13 @@ public class VonageService : IVonageService
         {
             return new ApiResponse<GetArchivesResponse>()
             {
-                Success                  = false,
+                Success = false,
                 Message = $"Exception:{ex.Message}, Inner Exception:{ex?.InnerException?.Message}"
             };
         }
-       
-        
     }
 
-    
+
     // public async Task<RecordingInfoDto> GetRecordingInfoAsync(string recordingId,
     //     CancellationToken cancellationToken = default)
     // {
