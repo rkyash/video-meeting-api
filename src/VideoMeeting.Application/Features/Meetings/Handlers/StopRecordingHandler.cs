@@ -20,9 +20,14 @@ public class StopRecordingHandler : IRequestHandler<StopRecordingCommand, Record
 
     public async Task<RecordingDto> Handle(StopRecordingCommand request, CancellationToken cancellationToken)
     {
+        var meeting = await _context.Meetings
+            .FirstOrDefaultAsync(m => m.RoomCode == request.RoomCode, cancellationToken);
+        
+        if (meeting == null)
+            throw new KeyNotFoundException("Meeting not found");
+        
         var recording = await _context.MeetingRecordings
-            .Include(r => r.Meeting)
-            .FirstOrDefaultAsync(r => r.Id == request.RecordingId && r.MeetingId == request.MeetingId, cancellationToken);
+            .FirstOrDefaultAsync(r => r.RecordingId== request.RecordingId && r.MeetingId == meeting.Id, cancellationToken);
 
         if (recording == null)
             throw new KeyNotFoundException("Recording not found");
@@ -32,7 +37,7 @@ public class StopRecordingHandler : IRequestHandler<StopRecordingCommand, Record
 
         var participant = await _context.MeetingParticipants
             .FirstOrDefaultAsync(
-                p => p.MeetingId == request.MeetingId && p.UserId == request.UserId && p.Role == ParticipantRole.Host,
+                p => p.MeetingId == recording.MeetingId && p.UserId == request.UserId && p.Role == ParticipantRole.Host,
                 cancellationToken);
 
         if (participant == null)
@@ -44,6 +49,7 @@ public class StopRecordingHandler : IRequestHandler<StopRecordingCommand, Record
         recording.Status = RecordingStatus.Completed;
 
         _context.MeetingRecordings.Update(recording);
+        
         await _context.SaveChangesAsync(cancellationToken);
 
         return new RecordingDto(

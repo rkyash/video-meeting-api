@@ -84,9 +84,27 @@ public class DisconnectFromMeetingHandler : IRequestHandler<DisconnectFromMeetin
                         // Log error but continue with disconnection process
                     }
                 }
+
+                if (activeParticipants > 0)
+                {
+                    var meetingParticipants = await _context.MeetingParticipants
+                        .Where(
+                            p => p.MeetingId == meeting.Id && p.LeftAt == null).ToListAsync(cancellationToken);
+
+                    if (meetingParticipants.Any())
+                    {
+                        foreach (var meetingParticipant in meetingParticipants)
+                        {
+                           meetingParticipant.LeftAt = DateTime.UtcNow;
+                           _context.MeetingParticipants.Update(meetingParticipant);
+                        }
+                    }
+                }
                 
                 // Clear the sessionId
                 meeting.SessionId = string.Empty;
+                meeting.Status = MeetingStatus.Ended;
+                meeting.EndedAt = DateTime.UtcNow;
                 _context.Meetings.Update(meeting);
             }
         }

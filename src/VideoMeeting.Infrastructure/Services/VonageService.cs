@@ -434,8 +434,14 @@ public class VonageService : IVonageService
         try
         {
             Guid applicationId = new Guid(_vonageConfig.ApplicationId);
-
-            var signalData = new SignalContent("hostDisconnected", "The host has ended the session");
+            var data = new Dictionary<string, string>
+            {
+                { "reason", "hostDisconnected" },
+                { "message", "The host has ended the session" }
+            };
+            // Create the signal content
+            
+            var signalData = new SignalContent("hostDisconnected", data.ToString());
 
             var request = SendSignalsRequest.Build()
                 .WithApplicationId(applicationId)

@@ -18,13 +18,13 @@ public class GetMeetingRecordingsHandler : IRequestHandler<GetMeetingRecordingsQ
     public async Task<List<RecordingDto>> Handle(GetMeetingRecordingsQuery request, CancellationToken cancellationToken)
     {
         var meeting = await _context.Meetings
-            .FirstOrDefaultAsync(m => m.Id == request.MeetingId, cancellationToken);
+            .FirstOrDefaultAsync(m => m.RoomCode == request.RoomCode, cancellationToken);
 
         if (meeting == null)
             throw new KeyNotFoundException("Meeting not found");
 
         var recordings = await _context.MeetingRecordings
-            .Where(r => r.MeetingId == request.MeetingId)
+            .Where(r => r.MeetingId == meeting.Id)
             .OrderByDescending(r => r.StartedAt)
             .Select(r => new RecordingDto(
                 r.Id,

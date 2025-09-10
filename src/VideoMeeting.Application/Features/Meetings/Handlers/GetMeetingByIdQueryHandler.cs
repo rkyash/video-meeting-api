@@ -20,7 +20,7 @@ public class GetMeetingByIdQueryHandler : IRequestHandler<GetMeetingByIdQuery, M
         var meeting = await _context.Meetings
             .Include(m => m.CreatedBy)
             .Include(m => m.Participants)
-            .FirstOrDefaultAsync(m => m.Id == request.Id, cancellationToken);
+            .FirstOrDefaultAsync(m => m.RoomCode == request.RoomCode, cancellationToken);
 
         if (meeting == null)
             return null;
@@ -87,40 +87,6 @@ public class GetMeetingByRoomCodeQueryHandler : IRequestHandler<GetMeetingByRoom
     }
 }
 
-public class GetUserMeetingsQueryHandler : IRequestHandler<GetUserMeetingsQuery, List<MeetingListDto>>
-{
-    private readonly IApplicationDbContext _context;
-
-    public GetUserMeetingsQueryHandler(IApplicationDbContext context)
-    {
-        _context = context;
-    }
-
-    public async Task<List<MeetingListDto>> Handle(GetUserMeetingsQuery request, CancellationToken cancellationToken)
-    {
-        var meetings = await _context.Meetings
-            .Include(m => m.CreatedBy)
-            .Include(m => m.Participants)
-            .Where(m => m.CreatedById == request.UserId)
-            .OrderByDescending(m => m.CreatedAt)
-            .Select(m => new MeetingListDto(
-                m.Id,
-                m.Title,
-                m.Description,
-                m.ScheduledAt,
-                m.StartedAt,
-                m.EndedAt,
-                "Unknown User",
-                m.Status,
-                m.Participants.Count(p => p.LeftAt == null),
-                m.IsRecordingEnabled
-            ))
-            .ToListAsync(cancellationToken);
-
-        return meetings;
-    }
-}
-
 public class GetMeetingParticipantsQueryHandler : IRequestHandler<GetMeetingParticipantsQuery, List<ParticipantDto>>
 {
     private readonly IApplicationDbContext _context;
@@ -133,8 +99,16 @@ public class GetMeetingParticipantsQueryHandler : IRequestHandler<GetMeetingPart
     public async Task<List<ParticipantDto>> Handle(GetMeetingParticipantsQuery request,
         CancellationToken cancellationToken)
     {
-        var participants = await _context.MeetingParticipants
-            .Where(p => p.MeetingId == request.MeetingId && p.LeftAt == null)
+        
+        var meeting = await _context.Meetings
+            .AsNoTracking()
+            .FirstOrDefaultAsync(m => m.RoomCode == request.RoomCode, cancellationToken);
+        
+        if (meeting == null)
+            throw new KeyNotFoundException("Meeting not found");
+        
+        var participants = await _context.MeetingParticipants.AsNoTracking()
+            .Where(p => p.MeetingId == meeting.Id && p.LeftAt == null)
             .Select(p => new ParticipantDto(
                 p.Id,
                 p.MeetingId,
