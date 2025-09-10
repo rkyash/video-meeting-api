@@ -51,7 +51,7 @@ public class StartRecordingHandler : IRequestHandler<StartRecordingCommand, Reco
         // if (existingRecording != null)
         //     throw new InvalidOperationException("Recording is already in progress for this session");
 
-        var fileName = request.RecordingName ?? $"Meeting_{meeting.Id}_{DateTime.UtcNow:yyyyMMdd_HHmmss}";
+        // var fileName = request.RecordingName ?? $"Meeting_{meeting.Id}_{DateTime.UtcNow:yyyyMMdd_HHmmss}";
 
         var recordingResp = await _vonageService.StartRecordingAsync(meeting.SessionId, cancellationToken);
 
@@ -65,7 +65,7 @@ public class StartRecordingHandler : IRequestHandler<StartRecordingCommand, Reco
             MeetingId = meeting.Id,
             SessionId = meeting.SessionId,
             RecordingId = recordingResp.Data.Id,
-            FileName = fileName,
+            FileName = "",
             Status = RecordingStatus.Recording,
             StartedAt = DateTime.UtcNow
         };

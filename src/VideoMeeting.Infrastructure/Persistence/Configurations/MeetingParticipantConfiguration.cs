@@ -22,8 +22,7 @@ public class MeetingParticipantConfiguration : IEntityTypeConfiguration<MeetingP
             .IsRequired();
 
         builder.Property(mp => mp.Role)
-            .HasConversion<int>()
-            .HasDefaultValue(ParticipantRole.Participant);
+            .HasConversion<int>();
 
         builder.Property(mp => mp.IsMuted)
             .HasDefaultValue(false);

@@ -6,5 +6,5 @@ namespace VideoMeeting.Application.Features.Meetings.Commands;
 public record StartRecordingCommand(
     string RoomCode,
     long UserId,
-    string? RecordingName = null
+    string? SessionId = null
 ) : IRequest<RecordingDto>;

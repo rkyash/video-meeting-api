@@ -14,7 +14,7 @@ public class MeetingParticipant : BaseEntity
     public string ConnectionId { get; set; } = string.Empty;
     public DateTime JoinedAt { get; set; } = DateTime.UtcNow;
     public DateTime? LeftAt { get; set; }
-    public ParticipantRole Role { get; set; } = ParticipantRole.Participant;
+    public ParticipantRole Role { get; set; }
     public bool IsMuted { get; set; } = false;
     public bool IsVideoEnabled { get; set; } = true;
     public bool IsScreenSharing { get; set; } = false;

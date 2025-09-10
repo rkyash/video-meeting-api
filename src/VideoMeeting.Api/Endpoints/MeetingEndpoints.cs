@@ -270,7 +270,7 @@ public static class MeetingEndpoints
             if (userId == 0)
                 return ResultExtensions.ToUnauthorizedResponse();
 
-            var command = new StartRecordingCommand(roomCode, userId, request.RecordingName);
+            var command = new StartRecordingCommand(roomCode, userId, request.SessionId);
             var recording = await mediator.Send(command);
             return recording.ToApiResponse("Recording started successfully");
         }
@@ -430,7 +430,7 @@ public record JoinMeetingRequest(
 );
 
 public record StartRecordingRequest(
-    string? RecordingName = null
+    string? SessionId = null
 );
 
 public record UserClaims(
