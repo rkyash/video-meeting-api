@@ -74,7 +74,10 @@ builder.Services.AddCors(options =>
 });
 
 // OpenAPI Configuration for Scalar UI
-builder.Services.AddOpenApi();
+builder.Services.AddOpenApi(option =>
+{
+    option.AddDocumentTransformer<BearerSecuritySchemeTransformer>();
+});
 
 var app = builder.Build();
 
