@@ -32,7 +32,7 @@ public class JoinMeetingHandler : IRequestHandler<JoinMeetingCommand, Participan
         if (meeting == null)
             throw new KeyNotFoundException("Meeting not found");
 
-        if (!request.UserRole.Equals(RoleConstants.Assessor) && (meeting.Status == MeetingStatus.Ended || meeting.Status == MeetingStatus.Cancelled))
+        if (!request.UserRole.Equals(RoleConstants.Assessor) && (meeting.Status == MeetingStatus.Scheduled || meeting.Status == MeetingStatus.Ended || meeting.Status == MeetingStatus.Cancelled))
             throw new InvalidOperationException("Meeting has ended or not started");
 
         // var user = await _context.Users
