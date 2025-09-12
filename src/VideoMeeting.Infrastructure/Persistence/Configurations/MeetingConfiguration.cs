@@ -10,8 +10,11 @@ public class MeetingConfiguration : IEntityTypeConfiguration<Meeting>
     public void Configure(EntityTypeBuilder<Meeting> builder)
     {
         builder.HasKey(m => m.Id);
-
-        builder.HasIndex(m => m.SessionId).IsUnique();
+        // Unique index only if SessionId is NOT NULL or empty
+        builder.HasIndex(m => m.SessionId)
+            .IsUnique()
+            .HasFilter("\"SessionId\" IS NOT NULL AND \"SessionId\" <> ''");
+        
         builder.HasIndex(m => m.RoomCode).IsUnique();
 
         builder.Property(m => m.Title)
@@ -44,6 +47,10 @@ public class MeetingConfiguration : IEntityTypeConfiguration<Meeting>
         builder.Property(m => m.CreatedAt)
             .IsRequired();
 
+        builder.Property(m => m.CreatedAt)
+            .IsRequired();
+
+        
         builder.HasMany(m => m.Participants)
             .WithOne(p => p.Meeting)
             .HasForeignKey(p => p.MeetingId)

@@ -89,7 +89,6 @@ public class CreateMeetingCommandHandler : IRequestHandler<CreateMeetingCommand,
         // Load the created by user for the response
         await _context.Meetings
             .Where(m => m.Id == meeting.Id)
-            .Include(m => m.CreatedBy)
             .LoadAsync(cancellationToken);
 
         return new MeetingResponseDto(

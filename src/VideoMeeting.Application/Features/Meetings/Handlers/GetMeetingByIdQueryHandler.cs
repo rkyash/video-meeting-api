@@ -18,7 +18,6 @@ public class GetMeetingByIdQueryHandler : IRequestHandler<GetMeetingByIdQuery, M
     public async Task<MeetingResponseDto?> Handle(GetMeetingByIdQuery request, CancellationToken cancellationToken)
     {
         var meeting = await _context.Meetings
-            .Include(m => m.CreatedBy)
             .Include(m => m.Participants)
             .FirstOrDefaultAsync(m => m.RoomCode == request.RoomCode, cancellationToken);
 
@@ -59,7 +58,6 @@ public class GetMeetingByRoomCodeQueryHandler : IRequestHandler<GetMeetingByRoom
         CancellationToken cancellationToken)
     {
         var meeting = await _context.Meetings
-            .Include(m => m.CreatedBy)
             .Include(m => m.Participants)
             .FirstOrDefaultAsync(m => m.RoomCode == request.RoomCode, cancellationToken);
 
