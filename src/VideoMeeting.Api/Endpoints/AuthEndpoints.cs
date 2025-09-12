@@ -16,13 +16,13 @@ public static class AuthEndpoints
             .WithTags("Authentication")
             .WithOpenApi();
 
-        group.MapPost("/register", RegisterAsync)
-            .WithName("Register")
-            .WithSummary("Register a new user account")
-            .WithDescription("Creates a new user account and returns JWT token")
-            .Produces<ApiResponse<AuthResponseDto>>(StatusCodes.Status201Created)
-            .Produces<ApiResponse>(StatusCodes.Status400BadRequest)
-            .Produces<ApiResponse>(StatusCodes.Status409Conflict);
+        // group.MapPost("/register", RegisterAsync)
+        //     .WithName("Register")
+        //     .WithSummary("Register a new user account")
+        //     .WithDescription("Creates a new user account and returns JWT token")
+        //     .Produces<ApiResponse<AuthResponseDto>>(StatusCodes.Status201Created)
+        //     .Produces<ApiResponse>(StatusCodes.Status400BadRequest)
+        //     .Produces<ApiResponse>(StatusCodes.Status409Conflict);
 
         group.MapPost("/login", LoginAsync)
             .WithName("Login")
